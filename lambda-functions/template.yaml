@@ -21,7 +21,7 @@ Resources:
       CodeUri: src/
       Handler: app.lambda_handler
       Runtime: python3.9
-      Timeout: 60
+      Timeout: 120
       Architectures:
         - x86_64
       Events:
