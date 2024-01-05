@@ -3,72 +3,99 @@ import json
 import os
 import logging
 
+from langchain.prompts import ChatPromptTemplate
 from langchain.sql_database import SQLDatabase
-from langchain_experimental.sql import SQLDatabaseChain
 from langchain.llms.bedrock import Bedrock
-from langchain.retrievers import AmazonKnowledgeBasesRetriever
+from langchain_core.output_parsers import StrOutputParser
+from langchain_core.runnables import RunnablePassthrough
+
 
 import logging
 log = logging.getLogger()
 log.setLevel("INFO")
 
-# import requests
-
 def execute_llm(bedrock_client, input, session_id):
-        # inference_modifier = {
-        #     'max_tokens_to_sample':4096, 
-        #     "temperature":0.5,
-        #     "top_k":250,
-        #     "top_p":1,
-        #     "stop_sequences": ["\n\nHuman"],
-        #     "sessionId": "session_id"
-        # }
+        db = SQLDatabase.from_uri("your-mysql-uri-here")
+
+        def get_schema(_):
+            return db.get_table_info()
         
-        # claude_llm = Bedrock(
-        #     model_id = "anthropic.claude-v2",
-        #     client = bedrock_client,
-        #     model_kwargs = inference_modifier,
-        # )
+        query_template = """Based on the table schema below, write a SQL query that would answer the user's question:
+        {schema}
 
-        # #TODO: Change for local DB copy of Nexus (or other app, for testing)
-        # db = SQLDatabase.from_uri("mysql+pymysql://patrick:local.db.pass9876@127.0.0.1/employees") 
-        # db_chain = SQLDatabaseChain.from_llm(llm=claude_llm, db=db, verbose=True)
-        # db_chain.use_query_checker()
+        Question: {question}
+        SQL Query:"""
+        prompt = ChatPromptTemplate.from_template(query_template)
 
-        # response = db_chain.run("How many employees are there?")
 
-        # retriever = AmazonKnowledgeBasesRetriever(
-        #     knowledge_base_id="PUIJP4EQUA",
-        #     retrieval_config={"vectorSearchConfiguration": {"numberOfResults": 4}, },
+        inference_modifier = {
+            'max_tokens_to_sample':1000, 
+            "temperature":0.7,
+            "top_k":250,
+            "top_p":1,
+            "stop_sequences": ["\n\nHuman"],
+        }
 
-        # )
-        body = json.dumps({
-            "prompt": f"\n\nHuman:{input}\n\nAssistant:",
-            "temperature": 0.7,
-            "top_p": 1,
-            "top_k": 250,
-            "max_tokens_to_sample": 1000,
-            "stop_sequences": ["\n\nHuman:"]
-        })
         modelId = 'anthropic.claude-v2:1'
         accept = 'application/json'
         contentType = 'application/json'
+        
+        claude_llm = Bedrock(
+            model_id = modelId,
+            client = bedrock_client,
+            model_kwargs = inference_modifier,
+        )
 
-        response = bedrock_client.invoke_model(body=body, modelId=modelId, accept=accept, contentType=contentType)
+        sql_response = (
+            RunnablePassthrough.assign(schema=get_schema)
+            | prompt
+            | claude_llm.bind(stop=["\nSQLResult:"])
+            | StrOutputParser()
+        )
 
-        # response = bedrock_client.retrieve_and_generate(
-        #     sessionId=session_id,
-        #     input={
-        #         'text': input
-        #     },
-        #     retrieveAndGenerateConfiguration={
-        #         'type': 'KNOWLEDGE_BASE',
-        #         'knowledgeBaseConfiguration': {
-        #             'knowledgeBaseId': os.environ['KNOWLEDGE_BASE_ID'],
-        #             'modelArn': 'arn:aws:bedrock:us-east-1::foundation-model/anthropic.claude-v2'
-        #         }
-        #     }
-        # )
+        sql_query = sql_response.invoke({"question": input})
+        sql_delimiter_1 = "sql"
+        sql_delimiter_2 = ";"
+        index1 = sql_query.find(sql_delimiter_1)
+        index2 = sql_query.find(sql_delimiter_2)
+        parsed_sql_query = sql_query[index1 + len(sql_delimiter_1) + 1: index2].strip()
+
+        print("***** SQL QUERY ****")
+        print(parsed_sql_query)
+        print("***********************")
+
+        full_template = """Based on the table schema below, question, sql query, and sql response, write a natural language response:
+        {schema}
+
+        Question: {question}
+        SQL Query: {query}
+        SQL Response: {response}"""
+        prompt_response = ChatPromptTemplate.from_template(full_template)
+
+        full_chain = (
+            RunnablePassthrough.assign(query=sql_response).assign(
+                schema=get_schema,
+                response=lambda x: db.run(parsed_sql_query),
+            )
+            | prompt_response
+            | claude_llm
+        )
+
+        response = full_chain.invoke({"question": input})
+
+
+
+        # body = json.dumps({
+        #     "prompt": f"\n\nHuman:{input}\n\nAssistant:",
+        #     "temperature": 0.7,
+        #     "top_p": 1,
+        #     "top_k": 250,
+        #     "max_tokens_to_sample": 1000,
+        #     "stop_sequences": ["\n\nHuman:"]
+        # })
+
+        # response = bedrock_client.invoke_model(body=body, modelId=modelId, accept=accept, contentType=contentType)
+
         return response
 
 def lambda_handler(event, context):
@@ -82,10 +109,10 @@ def lambda_handler(event, context):
     print(f"Human: {input}")
 
     response = execute_llm(bedrock, input, session_id)
-    response_body = json.loads(response.get('body').read())
-    completion = response_body.get('completion')
+    # response_body = json.loads(response.get('body').read())
+    # completion = response_body.get('completion')
 
-    print(f"AI Assistant: {completion}")
+    print(f"AI Assistant: {response}")
 
     return {
         "statusCode": 200,
@@ -93,7 +120,7 @@ def lambda_handler(event, context):
             "Content-Type": "application/json",
         },
         "body": {
-            "ai_response": json.dumps(response_body),
+            "ai_response": json.dumps(response),
             # "sessionId": response["sessionId"],
             # "citations": response["citations"]
         },
