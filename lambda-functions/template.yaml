@@ -23,7 +23,7 @@ Resources:
       Runtime: python3.9
       Timeout: 60
       Architectures:
-        - arm64
+        - x86_64
       Events:
         CallBedrock:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
