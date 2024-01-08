@@ -254,3 +254,5 @@ lambda-functions/app.log
 lambda-functions/pyvenv.cfg
 
 lambda-functions/notes.txt
+
+lambda-functions/env.json

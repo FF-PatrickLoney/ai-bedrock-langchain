@@ -1,7 +1,6 @@
 import boto3
 import json
 import os
-import logging
 
 from langchain.prompts import ChatPromptTemplate
 from langchain.sql_database import SQLDatabase
@@ -10,12 +9,8 @@ from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
 
 
-import logging
-log = logging.getLogger()
-log.setLevel("INFO")
-
-def execute_llm(bedrock_client, input, session_id):
-        db = SQLDatabase.from_uri("mysql+pymysql://your-mysql-uri-here")
+def execute_llm(bedrock_client, input):
+        db = SQLDatabase.from_uri(os.environ["DatabaseUri"])
 
         def get_schema(_):
             return db.get_table_info()
@@ -37,8 +32,6 @@ def execute_llm(bedrock_client, input, session_id):
         }
 
         modelId = 'anthropic.claude-v2:1'
-        accept = 'application/json'
-        contentType = 'application/json'
         
         claude_llm = Bedrock(
             model_id = modelId,
@@ -100,11 +93,10 @@ def lambda_handler(event, context):
 
     body = json.loads(event['body'])
     input = body.get('input')
-    session_id = body.get("sessionId")
 
     print(f"Human: {input}")
 
-    response = execute_llm(bedrock, input, session_id)
+    response = execute_llm(bedrock, input)
 
     print(f"AI Assistant: {response}")
 
