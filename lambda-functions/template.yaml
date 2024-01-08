@@ -33,12 +33,18 @@ Parameters:
   DatabaseUri:
     Type: String
     Description: DB connection string
+  KnowledgeBaseId:
+    Type: String
+    Description: Bedrock Knowledge Base Id
+  DatasourceId:
+    Type: String
+    Description: Bedrock Datasource Id
 
 Resources:
-  CallBedrockFunction:
+  CallBedrockSQLFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: src/
+      CodeUri: src/call-bedrock-sql/
       Handler: app.lambda_handler
       Runtime: python3.9
       Environment:
@@ -51,7 +57,30 @@ Resources:
         CallBedrock:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
-            Path: /call-bedrock
+            Path: /call-bedrock-sql
+            Method: post
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: "bedrock:*"
+              Resource: "*"
+  CallBedrockKBFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: src/call-bedrock-kb/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Environment:
+        Variables:
+          KnowledgeBaseId: !Ref KnowledgeBaseId
+          DatasourceId: !Ref DatasourceId
+      Architectures:
+        - x86_64
+      Events:
+        CallBedrock:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /call-bedrock-kb
             Method: post
       Policies:
         - Statement:
