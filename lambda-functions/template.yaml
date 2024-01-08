@@ -39,7 +39,12 @@ Parameters:
   DatasourceId:
     Type: String
     Description: Bedrock Datasource Id
-
+  GoogleApiKey:
+    Type: String
+    Description: Api Key for Google
+  GoogleSearchEngineId:
+    Type: String
+    Description: Id for Google Search Engine
 Resources:
   CallBedrockSQLFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
@@ -81,6 +86,29 @@ Resources:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /call-bedrock-kb
+            Method: post
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: "bedrock:*"
+              Resource: "*"
+  CallBedrockWebFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: src/call-bedrock-web/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Environment:
+        Variables:
+          GoogleApiKey: !Ref GoogleApiKey
+          GoogleSearchEngineId: !Ref GoogleSearchEngineId
+      Architectures:
+        - x86_64
+      Events:
+        CallBedrock:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /call-bedrock-web
             Method: post
       Policies:
         - Statement:
