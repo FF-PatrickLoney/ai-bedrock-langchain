@@ -8,27 +8,107 @@ Description: >
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
-    Timeout: 3
+    Timeout: 60
     MemorySize: 128
-
     # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
     LoggingConfig:
       LogFormat: JSON
+
+Parameters:
+  ProjectName:
+    Type: String
+    Default: ai-bedrock
+    Description: (Required) The name of the project
+    MinLength: 3
+    MaxLength: 50
+    AllowedPattern: ^[A-Za-z_-]+$
+    ConstraintDescription: "Required. Can be characters, hyphen, and underscore only. No numbers or special characters allowed."
+  StageName:
+    Type: String
+    Default: dev
+    Description: (Required) Enter dev, prod. Default is dev.
+    AllowedValues:
+      - dev
+      - prod
+  DatabaseUri:
+    Type: String
+    Description: DB connection string
+  KnowledgeBaseId:
+    Type: String
+    Description: Bedrock Knowledge Base Id
+  DatasourceId:
+    Type: String
+    Description: Bedrock Datasource Id
+  GoogleApiKey:
+    Type: String
+    Description: Api Key for Google
+  GoogleSearchEngineId:
+    Type: String
+    Description: Id for Google Search Engine
 Resources:
-  CallBedrockFunction:
+  CallBedrockSQLFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
-      CodeUri: src/
+      CodeUri: src/call-bedrock-sql/
       Handler: app.lambda_handler
       Runtime: python3.9
-      Timeout: 60
+      Environment:
+        Variables:
+          DatabaseUri: !Ref DatabaseUri
+      Timeout: 120
       Architectures:
         - x86_64
       Events:
         CallBedrock:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
-            Path: /call-bedrock
+            Path: /call-bedrock-sql
+            Method: post
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: "bedrock:*"
+              Resource: "*"
+  CallBedrockKBFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: src/call-bedrock-kb/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Environment:
+        Variables:
+          KnowledgeBaseId: !Ref KnowledgeBaseId
+          DatasourceId: !Ref DatasourceId
+      Architectures:
+        - x86_64
+      Events:
+        CallBedrock:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /call-bedrock-kb
+            Method: post
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: "bedrock:*"
+              Resource: "*"
+  CallBedrockWebFunction:
+    Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
+    Properties:
+      CodeUri: src/call-bedrock-web/
+      Handler: app.lambda_handler
+      Runtime: python3.9
+      Environment:
+        Variables:
+          GoogleApiKey: !Ref GoogleApiKey
+          GoogleSearchEngineId: !Ref GoogleSearchEngineId
+      Architectures:
+        - x86_64
+      Events:
+        CallBedrock:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /call-bedrock-web
             Method: post
       Policies:
         - Statement:
