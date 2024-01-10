@@ -1,0 +1,6 @@
+{
+  "python.analysis.extraPaths": [
+    "lambda-functions/src/shared_layer",
+    "lambda-functions/src/libraries_layer/.venv/lib/python3.12/site-packages"
+  ]
+}

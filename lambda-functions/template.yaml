@@ -13,19 +13,17 @@ Globals:
     # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
     LoggingConfig:
       LogFormat: JSON
+    Layers:
+      - !Ref LibrariesLayer
+      - !Ref SharedLayer
+    Environment:
+      Variables:
+        Environment: !Ref Environment
 
 Parameters:
-  ProjectName:
+  Environment:
     Type: String
-    Default: ai-bedrock
-    Description: (Required) The name of the project
-    MinLength: 3
-    MaxLength: 50
-    AllowedPattern: ^[A-Za-z_-]+$
-    ConstraintDescription: "Required. Can be characters, hyphen, and underscore only. No numbers or special characters allowed."
-  StageName:
-    Type: String
-    Default: dev
+    Default: !Sub ${Environment}
     Description: (Required) Enter dev, prod. Default is dev.
     AllowedValues:
       - dev
@@ -36,9 +34,6 @@ Parameters:
   KnowledgeBaseId:
     Type: String
     Description: Bedrock Knowledge Base Id
-  DatasourceId:
-    Type: String
-    Description: Bedrock Datasource Id
   GoogleApiKey:
     Type: String
     Description: Api Key for Google
@@ -46,12 +41,30 @@ Parameters:
     Type: String
     Description: Id for Google Search Engine
 Resources:
+  LibrariesLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: src/libraries_layer
+      CompatibleRuntimes:
+        - python3.11
+    Metadata:
+      BuildMethod: python3.11
+      BuildArchitecture: x86_64
+  SharedLayer:
+    Type: AWS::Serverless::LayerVersion
+    Properties:
+      ContentUri: src/shared_layer
+      CompatibleRuntimes:
+        - python3.11
+    Metadata:
+      BuildMethod: python3.11
+      BuildArchitecture: x86_64
   CallBedrockSQLFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
       CodeUri: src/call-bedrock-sql/
       Handler: app.lambda_handler
-      Runtime: python3.9
+      Runtime: python3.11
       Environment:
         Variables:
           DatabaseUri: !Ref DatabaseUri
@@ -74,7 +87,7 @@ Resources:
     Properties:
       CodeUri: src/call-bedrock-kb/
       Handler: app.lambda_handler
-      Runtime: python3.9
+      Runtime: python3.11
       Environment:
         Variables:
           KnowledgeBaseId: !Ref KnowledgeBaseId
@@ -97,7 +110,7 @@ Resources:
     Properties:
       CodeUri: src/call-bedrock-web/
       Handler: app.lambda_handler
-      Runtime: python3.9
+      Runtime: python3.11
       Environment:
         Variables:
           GoogleApiKey: !Ref GoogleApiKey
@@ -115,7 +128,6 @@ Resources:
             - Effect: Allow
               Action: "bedrock:*"
               Resource: "*"
-
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM

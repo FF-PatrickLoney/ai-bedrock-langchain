@@ -4,7 +4,7 @@ version = 0.1
 
 [default]
 [default.global.parameters]
-stack_name = "ai-bot-bedrock"
+stack_name = "ai-bedrock-stack"
 
 [default.build.parameters]
 cached = true
@@ -29,3 +29,16 @@ warm_containers = "EAGER"
 
 [default.local_start_lambda.parameters]
 warm_containers = "EAGER"
+
+
+[dev.deploy.parameters]
+stack_name = "dev-ai-bedrock-stack"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=dev"
+
+[prod.deploy.parameters]
+stack_name = "prod-ai-bedrock-stack"
+region = "us-east-1"
+capabilities = "CAPABILITY_IAM"
+parameter_overrides = "Environment=prod"
