@@ -66,4 +66,5 @@ def lambda_handler(event, context):
             "sessionId": response["sessionId"],
             "citations": response["citations"]
         },
+        "isBase64Encoded": False
     }
