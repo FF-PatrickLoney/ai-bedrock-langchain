@@ -10,6 +10,7 @@ from botocore.exceptions import ClientError
 
 
 def get_secrets(env: str) -> dict:
+    env = "dev" if env == "local" else env
     secret_name = f"{env}-ai-bedrock"
     region_name = "us-east-1"
 

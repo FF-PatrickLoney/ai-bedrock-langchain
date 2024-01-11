@@ -1,15 +1,17 @@
 AWSTemplateFormatVersion: "2010-09-09"
-Transform: AWS::Serverless-2016-10-31
-Description: >
-  ai-bot-bedrock
 
-  Sample SAM Template for ai-bot-bedrock
+Transform: "AWS::Serverless-2016-10-31"
+
+Description: >
+  ai-chatbot-bedrock
+
+  SAM Template for project using lambda functions in order to combine the capabilities of Amazon Bedrock and LangChain
 
 # More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
 Globals:
   Function:
     Timeout: 60
-    MemorySize: 128
+    MemorySize: 1536
     # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
     LoggingConfig:
       LogFormat: JSON
@@ -23,23 +25,16 @@ Globals:
 Parameters:
   Environment:
     Type: String
-    Default: !Sub ${Environment}
-    Description: (Required) Enter dev, prod. Default is dev.
+    Default: local
+    Description: (Required) Enter local, dev or prod. Default is dev.
     AllowedValues:
+      - local
       - dev
       - prod
-  DatabaseUri:
+  SecretsManagerArn:
     Type: String
-    Description: DB connection string
-  KnowledgeBaseId:
-    Type: String
-    Description: Bedrock Knowledge Base Id
-  GoogleApiKey:
-    Type: String
-    Description: Api Key for Google
-  GoogleSearchEngineId:
-    Type: String
-    Description: Id for Google Search Engine
+    Description: Secrets manager ARN for the corresponding env.
+
 Resources:
   LibrariesLayer:
     Type: AWS::Serverless::LayerVersion
@@ -59,85 +54,126 @@ Resources:
     Metadata:
       BuildMethod: python3.11
       BuildArchitecture: x86_64
+  ApiDeployment:
+    Type: AWS::Serverless::Api
+    Properties:
+      StageName: !Ref Environment
   CallBedrockSQLFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
+      FunctionName: !Sub "${Environment}CallBedrockSQLFunction"
       CodeUri: src/call-bedrock-sql/
       Handler: app.lambda_handler
       Runtime: python3.11
-      Environment:
-        Variables:
-          DatabaseUri: !Ref DatabaseUri
       Timeout: 120
       Architectures:
         - x86_64
+      FunctionUrlConfig:
+        AuthType: NONE
       Events:
-        CallBedrock:
+        ApiEvent:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /call-bedrock-sql
             Method: post
+            RestApiId: !Ref ApiDeployment
       Policies:
         - Statement:
             - Effect: Allow
               Action: "bedrock:*"
               Resource: "*"
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref SecretsManagerArn
   CallBedrockKBFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
+      FunctionName: !Sub "${Environment}CallBedrockKBFunction"
       CodeUri: src/call-bedrock-kb/
       Handler: app.lambda_handler
       Runtime: python3.11
-      Environment:
-        Variables:
-          KnowledgeBaseId: !Ref KnowledgeBaseId
-          DatasourceId: !Ref DatasourceId
       Architectures:
         - x86_64
+      FunctionUrlConfig:
+        AuthType: NONE
       Events:
-        CallBedrock:
+        ApiEvent:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /call-bedrock-kb
             Method: post
+            RestApiId: !Ref ApiDeployment
       Policies:
         - Statement:
             - Effect: Allow
               Action: "bedrock:*"
               Resource: "*"
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref SecretsManagerArn
   CallBedrockWebFunction:
     Type: AWS::Serverless::Function # More info about Function Resource: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#awsserverlessfunction
     Properties:
+      FunctionName: !Sub "${Environment}CallBedrockWebFunction"
       CodeUri: src/call-bedrock-web/
       Handler: app.lambda_handler
       Runtime: python3.11
-      Environment:
-        Variables:
-          GoogleApiKey: !Ref GoogleApiKey
-          GoogleSearchEngineId: !Ref GoogleSearchEngineId
       Architectures:
         - x86_64
+      FunctionUrlConfig:
+        AuthType: NONE
       Events:
-        CallBedrock:
+        ApiEvent:
           Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
           Properties:
             Path: /call-bedrock-web
             Method: post
+            RestApiId: !Ref ApiDeployment
       Policies:
         - Statement:
             - Effect: Allow
               Action: "bedrock:*"
               Resource: "*"
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref SecretsManagerArn
 Outputs:
   # ServerlessRestApi is an implicit API created out of Events key under Serverless::Function
   # Find out more about other implicit resources you can reference within SAM
   # https://github.com/awslabs/serverless-application-model/blob/master/docs/internals/generated_resources.rst#api
-  AIBotAPI:
-    Description: API Gateway endpoint URL for Prod stage for Call Bedrock function
-    Value: !Sub "https://${ServerlessRestApi}.execute-api.${AWS::Region}.amazonaws.com/Prod/hello/"
-  CallBedrockFunction:
-    Description: Call Bedrock Lambda Function ARN
-    Value: !GetAtt CallBedrockFunction.Arn
-  CallBedrockFunctionIamRole:
-    Description: Implicit IAM Role created for Call Bedrock function
-    Value: !GetAtt CallBedrockFunctionRole.Arn
+  ApiEndpointCallBedrockSQL:
+    Description: API Gateway endpoint URL for CallBedrockSQL function
+    Value: !Sub "https://${ApiDeployment}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/call-bedrock-sql/"
+  FunctionUrlCallBedrockSQL:
+    Description: "Lambda Function URL Endpoint for CallBedrockSQL"
+    Value:
+      Fn::GetAtt: CallBedrockSQLFunctionUrl.FunctionUrl
+  CallBedrockSQLFunction:
+    Description: Call Bedrock SQL Lambda Function ARN
+    Value: !GetAtt CallBedrockSQLFunction.Arn
+  CallBedrockSQLFunctionIamRole:
+    Description: Implicit IAM Role created for Call Bedrock SQL function
+    Value: !GetAtt CallBedrockSQLFunction.Arn
+  ApiEndpointCallBedrockKB:
+    Description: API Gateway endpoint URL for CallBedrockKb function
+    Value: !Sub "https://${ApiDeployment}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/call-bedrock-kb/"
+  FunctionUrlCallBedrockKB:
+    Description: "Lambda Function URL Endpoint for CallBedrockKB"
+    Value:
+      Fn::GetAtt: CallBedrockKBFunctionUrl.FunctionUrl
+  CallBedrockKBFunction:
+    Description: Call Bedrock KB Lambda Function ARN
+    Value: !GetAtt CallBedrockKBFunction.Arn
+  CallBedrockKBFunctionIamRole:
+    Description: Implicit IAM Role created for Call Bedrock KB function
+    Value: !GetAtt CallBedrockKBFunction.Arn
+  ApiEndpointCallBedrockWeb:
+    Description: API Gateway endpoint URL for CallBedrockWeb function
+    Value: !Sub "https://${ApiDeployment}.execute-api.${AWS::Region}.amazonaws.com/${Environment}/call-bedrock-web/"
+  FunctionUrlCallBedrockWeb:
+    Description: "Lambda Function URL Endpoint for CallBedrockWeb"
+    Value:
+      Fn::GetAtt: CallBedrockWebFunctionUrl.FunctionUrl
+  CallBedrockWebFunction:
+    Description: Call Bedrock Web Lambda Function ARN
+    Value: !GetAtt CallBedrockKBFunction.Arn
+  CallBedrockWebFunctionIamRole:
+    Description: Implicit IAM Role created for Call Bedrock Web function
+    Value: !GetAtt CallBedrockKBFunction.Arn

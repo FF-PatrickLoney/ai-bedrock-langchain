@@ -111,4 +111,5 @@ def lambda_handler(event, context):
         "body": {
             "ai_response": json.dumps(response),
         },
+        "isBase64Encoded": False
     }
