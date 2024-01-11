@@ -2,6 +2,8 @@ import boto3
 import json
 import os
 
+from secrets_manager_helper import get_secrets
+
 
 def execute_llm(bedrock_client, input, session_id):
     response = ""
@@ -36,6 +38,9 @@ def execute_llm(bedrock_client, input, session_id):
 
 def lambda_handler(event, context):
     print("Prompting...")
+    secrets_dict = get_secrets(os.environ['Environment'])
+    os.environ['KnowledgeBaseId'] = secrets_dict.get('KnowledgeBaseId')
+    
     bedrock_client = boto3.client(
         service_name="bedrock-agent-runtime",
         region_name="us-east-1",

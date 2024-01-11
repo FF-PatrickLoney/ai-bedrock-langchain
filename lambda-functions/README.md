@@ -26,4 +26,14 @@ To start and test your Lambda Functions locally:
 
 ## Local Dependencies and Intellisense
 
-When working locally, to get intellisense for your dependencies, create a venv in the functions folder and install requirements with pip.
+When working locally, to get intellisense for your dependencies, create a venv in libraries_layer folder and install with pip.
+.vscode/settings.json must include the path were your dependencies were installed.
+
+## Secrets
+
+Create a env.json file with the format specified in the example.env.json
+The only variable that needs to be defined is Environment, the rest is handled by AWS Secrets Manager
+
+`example-secrets-manager-keys.json` indicated the keys that should be available in the secrets manager.
+Make sure a Secrets Manager exists in your AWS account with said keys.
+Check `secrets_manager_helper.get_secrets()` for the naming convention of the secrets manager.

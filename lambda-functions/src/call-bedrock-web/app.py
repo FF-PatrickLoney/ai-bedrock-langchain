@@ -6,9 +6,12 @@ from langchain.llms.bedrock import Bedrock
 from langchain.tools import Tool
 from langchain_community.utilities import google_search
 from langchain.agents import initialize_agent, agent_types
+from secrets_manager_helper import get_secrets
 
-os.environ["GOOGLE_CSE_ID"] = os.getenv("GoogleSearchEngineId")
-os.environ["GOOGLE_API_KEY"] = os.getenv("GoogleApiKey")
+def set_env_vars(): 
+    secrets_dict = get_secrets(os.environ['Environment'])
+    os.environ["GOOGLE_CSE_ID"] = secrets_dict.get("GoogleSearchEngineId")
+    os.environ["GOOGLE_API_KEY"] = secrets_dict.get("GoogleApiKey")
 
 def execute_llm(bedrock_client, input):
         search = google_search.GoogleSearchAPIWrapper(k=5)
@@ -42,6 +45,7 @@ def execute_llm(bedrock_client, input):
         return response
 
 def lambda_handler(event, context):
+    set_env_vars()
     print("Prompting...")
     bedrock = boto3.client(service_name='bedrock-runtime')
 

@@ -7,10 +7,13 @@ from langchain.sql_database import SQLDatabase
 from langchain.llms.bedrock import Bedrock
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
+from secrets_manager_helper import get_secrets
 
 
 def execute_llm(bedrock_client, input):
-        db = SQLDatabase.from_uri(os.environ["DatabaseUri"])
+        secrets_dict = get_secrets(os.environ['Environment'])
+
+        db = SQLDatabase.from_uri(secrets_dict.get('DatabaseUri'))
 
         def get_schema(_):
             return db.get_table_info()
