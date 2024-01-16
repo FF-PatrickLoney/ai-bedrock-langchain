@@ -35,10 +35,10 @@ warm_containers = "EAGER"
 stack_name = "dev-ai-bedrock-stack"
 region = "us-east-1"
 capabilities = "CAPABILITY_IAM"
-parameter_overrides = "Environment=\"dev\" SecretsManagerArn=\"arn:aws:secretsmanager:us-east-1:379934916541:secret:dev-ai-bedrock-nwnbTs\""
+parameter_overrides = "Environment=\"dev\" SecretsManagerArn=\"arn:aws:secretsmanager:us-east-1:011443431823:secret:dev-ai-bedrock-kjiLhQ\""
 resolve_s3 = true
 s3_prefix = "dev-ai-bedrock-stack"
-profile = "patrick-personal"
+profile = "sc-ai"
 confirm_changeset = true
 image_repositories = []
 disable_rollback = true
@@ -49,6 +49,6 @@ region = "us-east-1"
 capabilities = "CAPABILITY_IAM"
 parameter_overrides = [
   "Environment=prod", 
-  "SecretsManagerArn=arn:aws:secretsmanager:us-east-1:379934916541:secret:dev-ai-bedrock-nwnbTs"
+  "SecretsManagerArn=arn:aws:secretsmanager:us-east-1:011443431823:secret:dev-ai-bedrock-kjiLhQ"
 ]
 
