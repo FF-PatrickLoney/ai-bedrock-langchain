@@ -77,16 +77,23 @@ def execute_llm(bedrock_client, input):
         """
         prompt_response = ChatPromptTemplate.from_template(full_template)
 
+        
+        schema=get_schema
+        query=parsed_sql_query
+        response = db.run(query)
+
         full_chain = (
-            RunnablePassthrough.assign(query=sql_response).assign(
-                schema=get_schema,
-                response=lambda x: db.run(parsed_sql_query),
-            )
-            | prompt_response
+            prompt_response
             | claude_llm
         )
 
-        response = full_chain.invoke({"question": input})
+        response = full_chain.invoke(
+            {
+                "schema": schema, 
+                "query": query, 
+                "response": response, 
+                "question": input
+            })
 
         return response
 
