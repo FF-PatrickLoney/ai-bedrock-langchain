@@ -2,7 +2,9 @@ import boto3
 import json
 import os
 
-from secrets_manager_helper import get_secrets
+from utils.secrets_manager_helper import get_secrets
+from models.call_bedrock_input_model import CallBedrockInput
+from config import Settings
 
 
 def execute_llm(bedrock_client, input, session_id):
@@ -36,9 +38,9 @@ def execute_llm(bedrock_client, input, session_id):
     )
     return response
 
-def lambda_handler(event, context):
+def prompt(call_bedrock_input: CallBedrockInput, settings: Settings):
     print("Prompting...")
-    secrets_dict = get_secrets(os.environ['Environment'])
+    secrets_dict = get_secrets(settings.environment)
     os.environ['KnowledgeBaseId'] = secrets_dict.get('KnowledgeBaseId')
     
     bedrock_client = boto3.client(
@@ -46,9 +48,8 @@ def lambda_handler(event, context):
         region_name="us-east-1",
     )
 
-    body = json.loads(event['body'])
-    input = body.get('input')
-    session_id = body.get('sessionId')
+    input = call_bedrock_input.input
+    session_id = call_bedrock_input.session_id
 
     print(f"Human: {input}")
 

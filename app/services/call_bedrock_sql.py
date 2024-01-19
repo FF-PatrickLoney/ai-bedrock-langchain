@@ -1,17 +1,18 @@
 import boto3
 import json
-import os
 
 from langchain.prompts import ChatPromptTemplate
 from langchain.sql_database import SQLDatabase
 from langchain.llms.bedrock import Bedrock
 from langchain_core.output_parsers import StrOutputParser
 from langchain_core.runnables import RunnablePassthrough
-from secrets_manager_helper import get_secrets
+from utils.secrets_manager_helper import get_secrets
+from models.call_bedrock_input_model import CallBedrockInput
+from config import Settings
 
 
-def execute_llm(bedrock_client, input):
-        secrets_dict = get_secrets(os.environ['Environment'])
+def execute_llm(bedrock_client, input: CallBedrockInput, settings: Settings):
+        secrets_dict = get_secrets(settings.environment)
 
         db = SQLDatabase.from_uri(secrets_dict.get('DatabaseUri'))
 
@@ -97,16 +98,15 @@ def execute_llm(bedrock_client, input):
 
         return response
 
-def lambda_handler(event, context):
+def prompt(call_bedrock_input: CallBedrockInput, settings: Settings):
     print("Prompting...")
     bedrock = boto3.client(service_name='bedrock-runtime')
 
-    body = json.loads(event['body'])
-    input = body.get('input')
+    input = call_bedrock_input.input
 
     print(f"Human: {input}")
 
-    response = execute_llm(bedrock, input)
+    response = execute_llm(bedrock, input, settings)
 
     print(f"AI Assistant: {response}")
 

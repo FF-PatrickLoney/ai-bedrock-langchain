@@ -1,0 +1,78 @@
+AWSTemplateFormatVersion: "2010-09-09"
+
+Transform: "AWS::Serverless-2016-10-31"
+
+Description: >
+  ai-chatbot-bedrock
+
+  SAM Template for project using lambda functions in order to combine the capabilities of Amazon Bedrock, LangChain, and FastAPI.
+
+# More info about Globals: https://github.com/awslabs/serverless-application-model/blob/master/docs/globals.rst
+Globals:
+  Function:
+    Timeout: 120
+    MemorySize: 1536
+    # You can add LoggingConfig parameters such as the Logformat, Log Group, and SystemLogLevel or ApplicationLogLevel. Learn more here https://docs.aws.amazon.com/serverless-application-model/latest/developerguide/sam-resource-function.html#sam-function-loggingconfig.
+    LoggingConfig:
+      LogFormat: JSON
+    Environment:
+      Variables:
+        Environment: !Ref Environment
+
+Parameters:
+  Environment:
+    Type: String
+    Default: local
+    Description: (Required) Enter local, dev or prod. Default is dev.
+    AllowedValues:
+      - local
+      - dev
+      - prod
+  SecretsManagerArn:
+    Type: String
+    Description: Secrets manager ARN for the corresponding env.
+
+Resources:
+  FastAPIFunction:
+    Type: AWS::Serverless::Function
+    Properties:
+      FunctionName: !Sub "${Environment}ScAiFastAPIFunction"
+      PackageType: Image
+      MemorySize: 1536
+      Environment:
+        Variables:
+          AWS_LWA_INVOKE_MODE: RESPONSE_STREAM
+      FunctionUrlConfig:
+        AuthType: NONE
+        InvokeMode: RESPONSE_STREAM
+      Policies:
+        - Statement:
+            - Effect: Allow
+              Action: "bedrock:*"
+              Resource: "*"
+        - AWSSecretsManagerGetSecretValuePolicy:
+            SecretArn: !Ref SecretsManagerArn
+      Tracing: Active
+      Events:
+        ItemBase:
+          Type: Api # More info about API Event Source: https://github.com/awslabs/serverless-application-model/blob/master/versions/2016-10-31.md#api
+          Properties:
+            Path: /
+            Method: get
+    Metadata:
+      Dockerfile: Dockerfile
+      DockerContext: ./app
+      DockerTag: v1
+  BedrockAgentInvocationPermission:
+    Type: AWS::Lambda::Permission
+    Properties:
+      Action: lambda:InvokeFunction
+      FunctionName: !Ref FastAPIFunction
+      Principal: bedrock.amazonaws.com
+Outputs:
+  FastAPIFunctionUrl:
+    Description: "Function URL for FastAPI function"
+    Value: !GetAtt FastAPIFunctionUrl.FunctionUrl
+  FastAPIFunction:
+    Description: "FastAPI Lambda Function ARN"
+    Value: !GetAtt FastAPIFunction.Arn

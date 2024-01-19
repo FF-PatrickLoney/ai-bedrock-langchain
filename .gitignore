@@ -243,16 +243,12 @@ $RECYCLE.BIN/
 
 # End of https://www.gitignore.io/api/osx,linux,python,windows,pycharm,visualstudiocode
 
-lambda-functions/.aws-sam
+.aws-sam
 
-lambda-functions/src/.venv
+app.log
 
-lambda-functions/src/requirements.txt
+pyvenv.cfg
 
-lambda-functions/app.log
+notes.txt
 
-lambda-functions/pyvenv.cfg
-
-lambda-functions/notes.txt
-
-lambda-functions/env.json
+env.json

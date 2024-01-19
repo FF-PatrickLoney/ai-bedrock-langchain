@@ -1,4 +1,4 @@
-def lambda_handler(event, context):
+def retrieve_reports(event, context):
     response_body = {
         'application/json': {
             'body': [

@@ -32,15 +32,15 @@ warm_containers = "EAGER"
 
 
 [dev.deploy.parameters]
-stack_name = "dev-ai-bedrock-stack"
+stack_name = "dev-ai-fastapi-bedrock-stack"
 region = "us-east-1"
 capabilities = "CAPABILITY_IAM"
 parameter_overrides = "Environment=\"dev\" SecretsManagerArn=\"arn:aws:secretsmanager:us-east-1:011443431823:secret:dev-ai-bedrock-kjiLhQ\""
 resolve_s3 = true
-s3_prefix = "dev-ai-bedrock-stack"
+s3_prefix = "dev-ai-fastapi-bedrock-stack"
 profile = "sc-ai"
 confirm_changeset = true
-image_repositories = []
+image_repositories = ["FastAPIFunction=011443431823.dkr.ecr.us-east-1.amazonaws.com/devaifastapibedrockstackf6471ddb/fastapifunctionead79d0drepo"]
 disable_rollback = true
 
 [prod.deploy.parameters]

@@ -1,23 +1,24 @@
 import boto3
-import json
 import uuid
+
+from models.call_bedrock_agent_input_model import CallBedrockAgentInput
 
 
 # https://docs.aws.amazon.com/code-library/latest/ug/python_3_bedrock-agent-runtime_code_examples.html
-def lambda_handler(event, context):
+def prompt(call_bedrock_agent_input: CallBedrockAgentInput):
     print("Prompting...")
+
     bedrock_client = boto3.client(
         service_name="bedrock-agent-runtime",
         region_name="us-east-1",
     )
 
-    body = json.loads(event['body'])
-    input = body.get('input')
-    agent_id = body.get("agentId")
-    agent_alias_id = body.get("agentAliasId")
-    session_id = body.get("sessionId")
+    input = call_bedrock_agent_input.input
+    agent_id = call_bedrock_agent_input.agent_id
+    agent_alias_id = call_bedrock_agent_input.agent_alias_id
+    session_id = call_bedrock_agent_input.session_id
 
-    print(input)
+    print(f"Human: {input}")
 
     # https://boto3.amazonaws.com/v1/documentation/api/latest/reference/services/bedrock-agent-runtime/client/invoke_agent.html
     response_stream = bedrock_client.invoke_agent(
@@ -34,6 +35,8 @@ def lambda_handler(event, context):
     for event in response_stream.get("completion"):
         chunk = event["chunk"]
         completion = completion + chunk["bytes"].decode()
+
+    print(f"AI Assistant: {completion}")
 
     return {
         "statusCode": 200,
